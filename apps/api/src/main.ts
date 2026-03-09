@@ -1,6 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { AppModule } from './app.module';
+
+// 未设置 JWT 时自动生成，避免部署时必须填一堆变量（重启后 token 会失效，仅适合试跑）
+if (!process.env.JWT_ACCESS_SECRET) {
+  process.env.JWT_ACCESS_SECRET = randomBytes(32).toString('hex');
+  console.warn('[API] JWT_ACCESS_SECRET 未设置，已自动生成（重启后登录会失效）');
+}
+if (!process.env.JWT_REFRESH_SECRET) {
+  process.env.JWT_REFRESH_SECRET = randomBytes(32).toString('hex');
+  console.warn('[API] JWT_REFRESH_SECRET 未设置，已自动生成');
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
