@@ -15,6 +15,9 @@ type ProductRow = {
   retailPrice: string; supplierPrice: string; inventory: number; isActive: boolean;
   categoryId?: string | null; category?: { id: string; name: string } | null;
 };
+type OrderRow = { id: string; orderNo: string; user?: { phone?: string; email?: string }; payAmount?: string; status: string };
+type CommissionRow = { id: string; user?: { phone?: string; email?: string }; order?: { orderNo: string }; level: number; amount: string; status: string };
+type WithdrawalRow = { id: string; user?: { phone?: string; email?: string }; amount: string; fee: string; status: string; createdAt: string };
 
 const layout = {
   sidebarWidth: 200,
@@ -43,9 +46,9 @@ export default function AdminPage() {
   const [dashboard, setDashboard] = useState<DashboardData>(null);
   const [users, setUsers] = useState<UserRow[] | null>(null);
   const [products, setProducts] = useState<ProductRow[] | null>(null);
-  const [orders, setOrders] = useState<unknown[] | null>(null);
-  const [commissions, setCommissions] = useState<unknown[] | null>(null);
-  const [withdrawals, setWithdrawals] = useState<unknown[] | null>(null);
+  const [orders, setOrders] = useState<OrderRow[] | null>(null);
+  const [commissions, setCommissions] = useState<CommissionRow[] | null>(null);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRow[] | null>(null);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(false);
@@ -275,7 +278,7 @@ export default function AdminPage() {
     setOrdersLoading(true);
     fetch(`${getApiUrl()}/admin/orders`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((data) => setOrders(Array.isArray(data) ? data : []))
+      .then((data) => setOrders(Array.isArray(data) ? (data as OrderRow[]) : []))
       .catch(() => setError('获取订单失败'))
       .finally(() => setOrdersLoading(false));
   };
@@ -285,7 +288,7 @@ export default function AdminPage() {
     setCommissionsLoading(true);
     fetch(`${getApiUrl()}/admin/commissions`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((data) => setCommissions(Array.isArray(data) ? data : []))
+      .then((data) => setCommissions(Array.isArray(data) ? (data as CommissionRow[]) : []))
       .catch(() => setError('获取佣金列表失败'))
       .finally(() => setCommissionsLoading(false));
   };
@@ -295,7 +298,7 @@ export default function AdminPage() {
     setWithdrawalsLoading(true);
     fetch(`${getApiUrl()}/admin/withdrawals`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
-      .then((data) => setWithdrawals(Array.isArray(data) ? data : []))
+      .then((data) => setWithdrawals(Array.isArray(data) ? (data as WithdrawalRow[]) : []))
       .catch(() => setError('获取提现列表失败'))
       .finally(() => setWithdrawalsLoading(false));
   };
@@ -700,7 +703,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o: { id: string; orderNo: string; user?: { phone?: string; email?: string }; payAmount?: string; status: string }) => (
+                    {orders.map((o) => (
                       <tr key={o.id} style={{ borderBottom: `1px solid ${layout.cardBorder}` }}>
                         <td style={{ padding: 12 }}>{o.orderNo}</td>
                         <td style={{ padding: 12 }}>{o.user ? (o.user.phone || o.user.email || '-') : '-'}</td>
@@ -742,7 +745,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {commissions.map((c: { id: string; user?: { phone?: string; email?: string }; order?: { orderNo: string }; level: number; amount: string; status: string }) => (
+                    {commissions.map((c) => (
                       <tr key={c.id} style={{ borderBottom: `1px solid ${layout.cardBorder}` }}>
                         <td style={{ padding: 12 }}>{c.user ? (c.user.phone || c.user.email || '-') : '-'}</td>
                         <td style={{ padding: 12 }}>{c.order?.orderNo ?? '-'}</td>
@@ -782,7 +785,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {withdrawals.map((w: { id: string; user?: { phone?: string; email?: string }; amount: string; fee: string; status: string; createdAt: string }) => (
+                    {withdrawals.map((w) => (
                       <tr key={w.id} style={{ borderBottom: `1px solid ${layout.cardBorder}` }}>
                         <td style={{ padding: 12 }}>{w.user ? (w.user.phone || w.user.email || '-') : '-'}</td>
                         <td style={{ padding: 12 }}>¥{w.amount}</td>
