@@ -8,6 +8,10 @@ const API = typeof window !== 'undefined' && window.location?.hostname === 'loca
 const USER_TOKEN_KEY = 'user_token';
 
 type Tab = 'profile' | 'referral' | 'commission' | 'points' | 'coupons' | 'orders' | 'withdrawals';
+type ReferralRelation = { level?: number; userPhone?: string; userEmail?: string; createdAt?: string };
+type CommissionRow = { id: string; order?: { orderNo: string }; level: number; amount: string; status: string };
+type CouponRow = { id: string; coupon?: { name: string; code: string } };
+type OrderRow = { id: string; orderNo: string; status: string; payAmount?: string; createdAt?: string };
 
 export default function MePage() {
   const router = useRouter();
@@ -15,11 +19,11 @@ export default function MePage() {
   const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('profile');
   const [profile, setProfile] = useState<{ inviteCode?: string; phone?: string; email?: string } | null>(null);
-  const [referral, setReferral] = useState<{ inviteCode?: string; level1Count?: number; level2Count?: number; relations?: unknown[] } | null>(null);
-  const [commission, setCommission] = useState<unknown[] | null>(null);
+  const [referral, setReferral] = useState<{ inviteCode?: string; level1Count?: number; level2Count?: number; relations?: ReferralRelation[] } | null>(null);
+  const [commission, setCommission] = useState<CommissionRow[] | null>(null);
   const [points, setPoints] = useState<{ balance: number; ledger: { delta: number; balance: number; reason: string; createdAt: string }[] } | null>(null);
-  const [coupons, setCoupons] = useState<unknown[] | null>(null);
-  const [orders, setOrders] = useState<unknown[] | null>(null);
+  const [coupons, setCoupons] = useState<CouponRow[] | null>(null);
+  const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [withdrawals, setWithdrawals] = useState<{ list: { id: string; amount: string; fee: string; status: string; createdAt: string }[]; availableBalance: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,16 +52,16 @@ export default function MePage() {
       fetch(`${API}/referral`, { headers: h }).then((r) => r.json()).then(setReferral).catch(() => setError('加载失败')).finally(() => setLoading(false));
     } else if (tab === 'commission') {
       setLoading(true);
-      fetch(`${API}/commission`, { headers: h }).then((r) => r.json()).then((d) => setCommission(Array.isArray(d) ? d : [])).catch(() => setError('加载失败')).finally(() => setLoading(false));
+      fetch(`${API}/commission`, { headers: h }).then((r) => r.json()).then((d) => setCommission(Array.isArray(d) ? (d as CommissionRow[]) : [])).catch(() => setError('加载失败')).finally(() => setLoading(false));
     } else if (tab === 'points') {
       setLoading(true);
       fetch(`${API}/user/points`, { headers: h }).then((r) => r.json()).then(setPoints).catch(() => setError('加载失败')).finally(() => setLoading(false));
     } else if (tab === 'coupons') {
       setLoading(true);
-      fetch(`${API}/user/coupons`, { headers: h }).then((r) => r.json()).then((d) => setCoupons(Array.isArray(d) ? d : [])).catch(() => setError('加载失败')).finally(() => setLoading(false));
+      fetch(`${API}/user/coupons`, { headers: h }).then((r) => r.json()).then((d) => setCoupons(Array.isArray(d) ? (d as CouponRow[]) : [])).catch(() => setError('加载失败')).finally(() => setLoading(false));
     } else if (tab === 'orders') {
       setLoading(true);
-      fetch(`${API}/order`, { headers: h }).then((r) => r.json()).then((d) => setOrders(Array.isArray(d) ? d : [])).catch(() => setError('加载失败')).finally(() => setLoading(false));
+      fetch(`${API}/order`, { headers: h }).then((r) => r.json()).then((d) => setOrders(Array.isArray(d) ? (d as OrderRow[]) : [])).catch(() => setError('加载失败')).finally(() => setLoading(false));
     } else if (tab === 'withdrawals') {
       setLoading(true);
       fetch(`${API}/user/withdrawals`, { headers: h }).then((r) => r.json()).then(setWithdrawals).catch(() => setError('加载失败')).finally(() => setLoading(false));
@@ -173,7 +177,7 @@ export default function MePage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead><tr style={{ background: '#f8fafc' }}><th style={{ textAlign: 'left', padding: 12 }}>订单号</th><th style={{ textAlign: 'left', padding: 12 }}>级别</th><th style={{ textAlign: 'left', padding: 12 }}>金额</th><th style={{ textAlign: 'left', padding: 12 }}>状态</th></tr></thead>
                 <tbody>
-                  {commission.map((c: { id: string; order?: { orderNo: string }; level: number; amount: string; status: string }) => (
+                  {commission.map((c) => (
                     <tr key={c.id} style={{ borderBottom: '1px solid #e2e8f0' }}><td style={{ padding: 12 }}>{c.order?.orderNo ?? '-'}</td><td style={{ padding: 12 }}>L{c.level}</td><td style={{ padding: 12 }}>¥{c.amount}</td><td style={{ padding: 12 }}>{c.status}</td></tr>
                   ))}
                 </tbody>
