@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Environment (do not commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Build / output
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# Logs & debug
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Optional
+*.local

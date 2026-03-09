@@ -1,0 +1,135 @@
+{
+  "version": "1.0.0",
+  "features": {
+    "pageBuilder": true,
+    "content": true,
+    "membership": true,
+    "points": true,
+    "coupon": true,
+    "giftcard": true,
+    "assistCampaign": true,
+    "balance": false,
+    "cod": false,
+    "multiMerchant": false,
+    "multiCity": true,
+    "multiStore": false,
+    "pickupVerify": false,
+    "pos": false,
+    "eSign": false,
+    "customForm": true
+  },
+  "compliance": {
+    "maxReferralDepth": 2,
+    "supplierViewMaskPhone": true,
+    "auditLogRetentionDays": 365
+  },
+  "product": {
+    "primarySku": "GIFTBOX-2180",
+    "primaryName": "亲密升级礼盒（调情香氛套装）",
+    "primaryPrice": 2180,
+    "purchaseLimit": {
+      "perUser": 2,
+      "period": "DAYS_30"
+    },
+    "stockAlertThreshold": 30
+  },
+  "commission": {
+    "level1Rate": 0.18,
+    "level2Rate": 0.06,
+    "triggerStatus": "COMPLETED",
+    "freezeDays": 10,
+    "withdrawal": {
+      "minAmount": 200,
+      "feeRate": 0,
+      "reviewMode": "MANUAL",
+      "dailyLimit": 20000
+    }
+  },
+  "marketing": {
+    "coupons": [
+      {
+        "code": "NEW100",
+        "name": "新客立减券",
+        "type": "AMOUNT_OFF",
+        "amountOff": 100,
+        "minOrderAmount": 2180,
+        "validDays": 30,
+        "claimLimitPerUser": 1,
+        "enabled": true
+      },
+      {
+        "code": "REPEAT200",
+        "name": "复购专享券",
+        "type": "AMOUNT_OFF",
+        "amountOff": 200,
+        "minOrderAmount": 2180,
+        "validDays": 60,
+        "claimLimitPerUser": 2,
+        "enabled": true
+      },
+      {
+        "code": "ASSIST300",
+        "name": "助力达标券",
+        "type": "AMOUNT_OFF",
+        "amountOff": 300,
+        "minOrderAmount": 2180,
+        "validDays": 7,
+        "claimLimitPerUser": 1,
+        "enabled": true
+      }
+    ],
+    "points": {
+      "enabled": true,
+      "earnRules": {
+        "perPaidOrder": 50,
+        "perYuanSpent": 0
+      },
+      "redeemRules": {
+        "pointsToYuanRate": 0.01,
+        "maxDeductionRate": 0.05
+      }
+    },
+    "giftcard": {
+      "enabled": true,
+      "defaultFaceValues": [200, 300, 500, 1000],
+      "expiryDays": 365
+    },
+    "assistCampaign": {
+      "enabled": true,
+      "defaultTargetHelps": 6,
+      "rewardCouponCode": "ASSIST300"
+    }
+  },
+  "membership": {
+    "enabled": true,
+    "plans": [
+      {
+        "code": "VIP-ANNUAL",
+        "name": "VIP年度会员",
+        "price": 299,
+        "durationDays": 365,
+        "benefits": {
+          "contentUnlock": true,
+          "orderDiscountAmount": 50,
+          "exclusiveGroupAccess": true
+        },
+        "enabled": true
+      }
+    ]
+  },
+  "loginReview": {
+    "enabled": true,
+    "mode": "INVITE_ONLY",
+    "inviteCodeRequired": true
+  },
+  "shippingPrivacy": {
+    "packageDisplayName": "日用品",
+    "senderDisplayName": "某某贸易",
+    "privacyModeDefault": true
+  },
+  "observability": {
+    "trackPV": true,
+    "trackFunnel": true,
+    "trackReferralAttribution": true
+  }
+}

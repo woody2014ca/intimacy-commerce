@@ -1,0 +1,23 @@
+{
+  "name": "intimacy-commerce",
+  "version": "1.0.0",
+  "private": true,
+  "description": "亲密关系教育电商平台 - Monorepo",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm run -r build",
+    "db:generate": "pnpm --filter api exec prisma generate",
+    "db:migrate": "pnpm --filter api exec prisma migrate deploy",
+    "db:push": "pnpm --filter api exec prisma db push",
+    "db:studio": "pnpm --filter api exec prisma studio",
+    "seed": "pnpm --filter api run seed",
+    "lint": "pnpm run -r lint",
+    "test": "pnpm run -r test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

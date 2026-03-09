@@ -1,0 +1,491 @@
+// Intimacy Commerce - Prisma Schema
+// 佣金仅来源于订单完成，推荐最多2级
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- RBAC & Audit ----------
+enum RoleCode {
+  SUPER_ADMIN
+  ADMIN
+  FINANCE
+  OPERATOR
+  SUPPLIER_VIEW
+  CUSTOMER
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  code        RoleCode @unique
+  name        String
+  permissions String[] // JSON array of permission keys
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model User {
+  id            String    @id @default(uuid())
+  phone         String?   @unique
+  email         String?   @unique
+  passwordHash  String?
+  inviteCode    String    @unique // 自己的邀请码
+  inviterId     String?
+  inviter       User?     @relation("ReferralRelation", fields: [inviterId], references: [id])
+  invitees      User[]    @relation("ReferralRelation")
+  level         String?   // member level code
+  roleId        String?
+  role          Role?     @relation(fields: [roleId], references: [id])
+  reviewStatus  String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  mustChangePwd Boolean   @default(false)
+  privacyMode   Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  addresses     Address[]
+  carts         Cart[]
+  orders        Order[]
+  couponClaims  CouponClaim[]
+  referralsFrom ReferralRelation[] @relation("Referrer")
+  referralsTo   ReferralRelation[]  @relation("Invitee")
+  commissions   Commission[]
+  withdrawals   Withdrawal[]
+  auditLogs     AuditLog[]
+  contentAccess ContentAccess[]
+  membership    Membership[]
+  pointsLedger  PointsLedger[]
+  formSubmissions FormSubmission[]
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String?
+  phone     String?
+  region    String?
+  detail    String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  resource   String
+  resourceId String?
+  beforeJson String?  // JSON snapshot
+  afterJson  String?
+  ip         String?
+  userAgent  String?
+  requestId  String?
+  createdAt  DateTime @default(now())
+}
+
+// ---------- System Settings (from default-settings.seed.json) ----------
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  valueJson String   // JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- Merchant / City / Shipping ----------
+model Merchant {
+  id        String   @id @default(uuid())
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  products  Product[]
+}
+
+model City {
+  id        String   @id @default(uuid())
+  name      String
+  code      String?  @unique
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shippingZones ShippingZone[]
+}
+
+model ShippingZone {
+  id        String   @id @default(uuid())
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id])
+  name      String
+  rulesJson String   // [{ minWeight, maxWeight, fee }, ...]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Store {
+  id         String   @id @default(uuid())
+  name       String
+  address    String?
+  cityId     String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ---------- Product ----------
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id            String    @id @default(uuid())
+  merchantId   String?
+  merchant      Merchant? @relation(fields: [merchantId], references: [id])
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  sku           String    @unique
+  name          String
+  description   String?
+  imageUrl      String?
+  supplierPrice Decimal   @db.Decimal(18, 2)
+  retailPrice   Decimal   @db.Decimal(18, 2)
+  inventory     Int       @default(0)
+  limitPerUser  Int?     // null = no limit
+  limitPeriod   String?   // DAYS_30 etc
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  inventoryLogs InventoryLog[]
+}
+
+model InventoryLog {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  delta      Int      // + or -
+  reason     String
+  refId      String?
+  createdAt  DateTime @default(now())
+}
+
+// ---------- Cart & Order ----------
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+enum OrderStatus {
+  CREATED
+  PAID
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNo         String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(CREATED)
+  totalAmount     Decimal     @db.Decimal(18, 2)
+  payAmount       Decimal     @db.Decimal(18, 2)
+  couponId        String?
+  couponDiscount  Decimal?    @db.Decimal(18, 2)
+  pointsDiscount  Decimal?    @db.Decimal(18, 2)
+  paidAt          DateTime?
+  formDataJson    String?     // custom form
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items     OrderItem[]
+  shipment  Shipment?
+  refunds   Refund[]
+  commissions Commission[]
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  price       Decimal  @db.Decimal(18, 2)
+  total       Decimal  @db.Decimal(18, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Shipment {
+  id           String   @id @default(uuid())
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id])
+  carrier      String?
+  trackingNo   String?
+  shippedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Refund {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  amount     Decimal  @db.Decimal(18, 2)
+  reason     String?
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ---------- Referral (2-level only) ----------
+model ReferralRelation {
+  id         String   @id @default(uuid())
+  userId     String   // 被邀请人
+  user       User     @relation("Invitee", fields: [userId], references: [id])
+  parentId   String   // 邀请人（level1 直接邀请人，level2 为上级的上级）
+  parent     User     @relation("Referrer", fields: [parentId], references: [id])
+  level      Int      // 1 or 2 only
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, parentId])
+  @@index([parentId, level])
+}
+
+// ---------- Commission & Withdrawal ----------
+enum CommissionStatus {
+  FROZEN
+  RELEASED
+  WITHDRAWN
+  REVOKED
+}
+
+model Commission {
+  id             String           @id @default(uuid())
+  orderId        String
+  order          Order            @relation(fields: [orderId], references: [id])
+  userId         String           // 受益人
+  user           User             @relation(fields: [userId], references: [id])
+  level          Int              // 1 or 2
+  amount         Decimal          @db.Decimal(18, 2)
+  status         CommissionStatus @default(FROZEN)
+  snapshotJson   String           // 不可变计算快照
+  freezeEndsAt   DateTime?
+  releasedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([orderId, userId, level])
+}
+
+model Withdrawal {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Decimal  @db.Decimal(18, 2)
+  fee         Decimal  @db.Decimal(18, 2) @default(0)
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED, PAID
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------- Coupon / Points / GiftCard ----------
+model Coupon {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  name             String
+  type             String   // AMOUNT_OFF, PERCENT_OFF, FREE_SHIP
+  amountOff        Decimal? @db.Decimal(18, 2)
+  percentOff       Decimal? @db.Decimal(18, 2)
+  minOrderAmount   Decimal? @db.Decimal(18, 2)
+  validFrom        DateTime?
+  validTo          DateTime?
+  claimLimitPerUser Int?   @default(1)
+  totalQuantity    Int?   // null = unlimited
+  claimedCount     Int     @default(0)
+  enabled          Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  claims           CouponClaim[]
+}
+
+model CouponClaim {
+  id        String   @id @default(uuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String?  // 使用在哪个订单
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([couponId, userId])
+}
+
+model PointsLedger {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  delta     Int
+  balance   Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+}
+
+model GiftCard {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  faceValue  Decimal  @db.Decimal(18, 2)
+  balance    Decimal  @db.Decimal(18, 2)
+  expiresAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ---------- Membership ----------
+model MembershipPlan {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  price         Decimal  @db.Decimal(18, 2)
+  durationDays  Int
+  benefitsJson  String   // { contentUnlock, orderDiscountAmount, ... }
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  memberships   Membership[]
+}
+
+model Membership {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  planId     String
+  plan       MembershipPlan   @relation(fields: [planId], references: [id])
+  startsAt   DateTime
+  expiresAt  DateTime
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([userId])
+}
+
+// ---------- Content ----------
+model ContentPost {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  body        String?  @db.Text
+  excerpt     String?
+  type        String   // ARTICLE, VIDEO, COURSE, AUDIO
+  videoUrl    String?
+  isVipOnly   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  access      ContentAccess[]
+}
+
+model ContentAccess {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  contentId String
+  content   ContentPost @relation(fields: [contentId], references: [id])
+  source    String?     // PURCHASE, VIP, FREE
+  createdAt DateTime    @default(now())
+
+  @@unique([userId, contentId])
+}
+
+// ---------- Page Builder ----------
+model PageBuilder {
+  id         String   @id @default(uuid())
+  slug       String   @unique
+  name       String
+  structureJson String @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ---------- Verification / Redemption ----------
+model Verification {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  orderId    String?
+  storeId    String?
+  maxRedeem  Int      @default(1)
+  redeemCount Int    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model RedemptionLog {
+  id             String       @id @default(uuid())
+  verificationId String
+  storeId        String?
+  redeemedAt     DateTime     @default(now())
+}
+
+// ---------- Form ----------
+model FormTemplate {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  schemaJson String  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  submissions FormSubmission[]
+}
+
+model FormSubmission {
+  id         String   @id @default(uuid())
+  templateId String
+  template   FormTemplate @relation(fields: [templateId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  orderId    String?
+  dataJson   String   @db.Text
+  createdAt  DateTime @default(now())
+}
